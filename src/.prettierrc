@@ -1,8 +1,9 @@
 {
-    "jsxSingleQuote": true,
     "singleQuote": true,
     "bracketSpacing": true,
     "tabWidth": 2,
     "semi": true,
+    "printWidth": 80,
+    "endOfLine": "lf",
     "trailingComma": "es5"
 }
