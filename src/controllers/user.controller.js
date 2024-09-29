@@ -22,30 +22,39 @@ const registerUser = asyncHandler(async (req, res) => {
   )
     throw new ApiError(400, 'All fields are necessary');
 
-  const existantUser = User.findOne({ $or: [{ username }, { email }] });
+  const existantUser = await User.findOne({ $or: [{ username }, { email }] });
   if (existantUser)
     throw new ApiError(409, 'User with username or email already exists');
 
   const avatarLocal = req.files?.avatar[0]?.path;
-  const coverImageLocal = req.files?.coverImage[0]?.path;
+  // const coverImageLocal = req.files?.coverImage[0]?.path;
+
+  let coverImageLocal;
+  if (
+    req.files &&
+    Array.isArray(req.files.coverImage) &&
+    req.files.coverImage.length > 0
+  )
+    coverImageLocal = req.files?.coverImage[0]?.path;
 
   if (!avatarLocal) throw new ApiError(400, 'Avatar is required');
 
+  let coverImage;
   const avatar = await uploadOnCloud(avatarLocal);
-  const coverImage = await uploadOnCloud(coverImageLocal);
+  if (coverImageLocal) coverImage = await uploadOnCloud(coverImageLocal);
 
   if (!avatar) throw new ApiError(400, 'Avatar is required');
 
   const newUser = await User.create({
     fullname,
     avatar: avatar.url,
-    coverImage: coverImage.url || '',
-    email: email,
+    coverImage: coverImage?.url || '',
+    email,
     username: username.toLowerCase(),
-    password: password,
+    password,
   });
 
-  const createdUser = User.findById(newUser._id).select(
+  const createdUser = await User.findById(newUser._id).select(
     '-password -refreshToken',
   );
 
