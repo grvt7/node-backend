@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { User } from '../models/user.model.js';
 import ApiError from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
@@ -350,6 +351,68 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     );
 });
 
+const getWatchHistory = asyncHandler(async (req, res) => {
+  // Alternative approach
+  // if (req.user._id === 'string') {
+  //   userId = new mongoose.Types.ObjectId(req.user._id);
+  // } else if (req.user._id instanceof mongoose.Types.ObjectId) {
+  //   userId = req.user._id;
+  // } else if (typeof req.user._id === 'number') {
+  //   userId = new mongoose.Types.ObjectId(req.user._id.toString());
+  // }
+  const user = await User.aggregate([
+    {
+      $match: {
+        _id: mongoose.Types.createFromHexString(req.user._id),
+      },
+    },
+    {
+      $lookup: {
+        from: 'videos',
+        localField: 'watchHistory',
+        foreignField: '_id',
+        as: 'watchHistory',
+        pipeline: [
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'owner',
+              foreignField: '_id',
+              as: 'owner',
+              pipeline: [
+                {
+                  $project: {
+                    fullname: 1,
+                    username: 1,
+                    avatar: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $addFields: {
+              owner: {
+                $first: '$owner',
+              },
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user[0].watchHistory,
+        'Watch History Fetched Successfully',
+      ),
+    );
+});
+
 export {
   registerUser,
   loginUser,
@@ -361,4 +424,5 @@ export {
   updateUserAvatar,
   updateUserCoverImage,
   getUserChannelProfile,
+  getWatchHistory,
 };
